@@ -1,0 +1,18 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    # Classes implementing AggregateInterface are automatically tagged
+    # and registered in AggregateRegistry via AggregatePass.
+    # You can also use the #[AsAggregate] PHP attribute instead.
+    Nalabdou\Algebra\Contract\AggregateInterface:
+        tags:
+            - algebra.aggregate
+
+    # Classes implementing AdapterInterface are automatically tagged
+    # and injected into CollectionFactory via AdapterPass.
+    # You can also use the #[AsAlgebraAdapter(priority: N)] PHP attribute instead.
+    Nalabdou\Algebra\Contract\AdapterInterface:
+        tags:
+            - algebra.adapter

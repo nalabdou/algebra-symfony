@@ -1,0 +1,4 @@
+algebra:
+    # Throw RuntimeException on invalid expression strings.
+    # Set false for lenient mode when expressions come from user input.
+    strict_mode: true
