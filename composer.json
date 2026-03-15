@@ -1,0 +1,66 @@
+{
+    "name": "nalabdou/algebra-symfony",
+    "description": "Symfony 7 bundle for algebra-php DI integration, Doctrine adapter.",
+    "type": "symfony-bundle",
+    "version": "1.0.0",
+    "license": "MIT",
+    "keywords": [
+        "algebra",
+        "symfony",
+        "bundle",
+        "relational",
+        "pipeline",
+        "doctrine"
+    ],
+    "authors": [
+        {
+            "name": "Nadim Al Abdou",
+            "email": "nadim.alabdou@gmail.com",
+            "homepage": "https://github.com/nalabdou",
+            "role": "Author"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "nalabdou/algebra-php": "^1.0",
+        "symfony/framework-bundle": "^7.0",
+        "symfony/dependency-injection": "^7.0",
+        "symfony/config": "^7.0",
+        "symfony/http-kernel": "^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5",
+        "phpstan/phpstan": "^2.0",
+        "friendsofphp/php-cs-fixer": "^3.60",
+        "doctrine/orm": "^3.2",
+        "doctrine/collections": "^2.2"
+    },
+    "suggest": {
+        "doctrine/orm": "Enables Doctrine QueryBuilder adapter",
+        "doctrine/collections": "Enables Doctrine ArrayCollection / PersistentCollection adapter"
+    },
+    "autoload": {
+        "psr-4": {
+            "Nalabdou\\Algebra\\Symfony\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Nalabdou\\Algebra\\Symfony\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "symfony": {
+            "require": "^7.0"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "platform": {
+            "php": "8.2.0"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
