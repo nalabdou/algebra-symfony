@@ -6,9 +6,6 @@
 
 Symfony 7 bundle for [algebra-php](https://github.com/nalabdou/algebra-php) — the pure PHP relational algebra engine.
 
-> **No changes to algebra-php are required.** This bundle works entirely with
-> its public API.
-
 ---
 
 ## Installation
@@ -61,26 +58,6 @@ Custom aggregates registered via `#[AsAggregate]` are available here after the
 first request (the `AlgebraBootstrapListener` re-registers them into Algebra's
 singleton registry after calling `Algebra::reset()`).
 
-### Injectable `CollectionFactory` — for custom adapters
-
-```php
-use Nalabdou\Algebra\Collection\CollectionFactory;
-
-public function __construct(
-    private readonly CollectionFactory $algebraFactory,
-) {}
-
-public function action(): void
-{
-    // CollectionFactory has all tagged adapters (Doctrine, CSV, etc.)
-    $result = $this->algebraFactory->create($queryBuilder)
-        ->where("item['status'] == 'paid'")
-        ->toArray();
-}
-```
-
----
-
 ## Custom aggregates
 
 ```php
@@ -132,19 +109,13 @@ final class CsvFileAdapter implements AdapterInterface
 }
 ```
 
-The adapter is auto-injected into the `algebra.factory` service. Use via injection:
+The adapter is auto-injected into the `algebra.adapter` service. Use :
 
 ```php
-// Via injected CollectionFactory — has all tagged adapters
-$result = $this->algebraFactory->create('/data/orders.csv')
+$result = Algebra::from('/data/orders.csv')
     ->where("item['status'] == 'paid'")
     ->toArray();
 ```
-
-> **Note:** `Algebra::from()` uses its own internal factory which only has the
-> built-in array/generator/traversable adapters. Custom adapters require the
-> injectable `CollectionFactory`.
-
 ---
 
 ## Doctrine adapters
@@ -163,14 +134,14 @@ composer require doctrine/collections
 
 ```php
 // Doctrine QueryBuilder
-$result = $this->algebraFactory->create(
+$result = Algebra::from(
     $em->createQueryBuilder()->select('o')->from(Order::class, 'o')
 )
 ->where("item['status'] == 'paid'")
 ->toArray();
 
 // Doctrine Collection (e.g. from a OneToMany relation)
-$result = $this->algebraFactory->create($user->getOrders())
+$result = Algebra::from($user->getOrders())
     ->orderBy('amount', 'desc')
     ->toArray();
 ```
@@ -194,6 +165,7 @@ algebra:
 | `algebra.factory` | `CollectionFactory` | ✓ |
 | `algebra.evaluator` | `ExpressionEvaluator` | ✓ |
 | `algebra.aggregates` | `AggregateRegistry` | ✓ |
+| `algebra.adapter_registry` | `AdapterRegistry` | ✓ |
 
 ---
 

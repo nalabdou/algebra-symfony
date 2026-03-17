@@ -9,15 +9,20 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 
 /**
- * Injects tagged adapters (sorted by priority) into the injectable CollectionFactory.
+ * Wires services tagged `algebra.adapter` into two places:
  *
- * Tagged adapters are available via `algebra.factory` injection.
- * They are not injected into `Algebra::from()` static, because algebra-php's
- * internal factory is private — the bundle does not modify algebra-php source.
+ * 1. `algebra.adapter_registry` — via `register(adapter, priority)` method calls,
+ *    so the injectable `CollectionFactory` accepts custom input types.
+ *
+ * 2. `algebra.bootstrap_listener` — as the `$adapters` array argument, so
+ *    `Algebra::from()` also accepts custom types after the first request.
+ *
+ * This means a single `#[AsAlgebraAdapter]` attribute makes a custom adapter
+ * available everywhere — both the injectable factory and the static entry point.
  *
  * Priority: higher = checked first. Doctrine QB=100, Doctrine Collection=90, default=0.
  *
- * Usage — PHP attribute:
+ * Usage — PHP attribute (recommended):
  * ```php
  * #[AsAlgebraAdapter(priority: 50)]
  * final class CsvFileAdapter implements AdapterInterface { ... }
@@ -33,26 +38,33 @@ final class AdapterPass implements CompilerPassInterface
 {
     public function process(ContainerBuilder $container): void
     {
-        if (!$container->hasDefinition('algebra.factory')) {
-            return;
-        }
-
         $tagged = $container->findTaggedServiceIds('algebra.adapter');
 
         if (empty($tagged)) {
             return;
         }
 
-        \uasort($tagged, static function (array $a, array $b): int {
-            return (int) ($b[0]['priority'] ?? 0) <=> (int) ($a[0]['priority'] ?? 0);
-        });
+        // 1. Wire into the AdapterRegistry service (for injectable CollectionFactory)
+        if ($container->hasDefinition('algebra.adapter_registry')) {
+            $registry = $container->getDefinition('algebra.adapter_registry');
 
-        $refs = \array_map(
-            static fn (string $id): Reference => new Reference($id),
-            \array_keys($tagged)
-        );
+            foreach ($tagged as $id => $tags) {
+                $priority = (int) ($tags[0]['priority'] ?? 0);
+                $registry->addMethodCall('register', [new Reference($id), $priority]);
+            }
+        }
 
-        $container->getDefinition('algebra.factory')
-            ->replaceArgument('$adapters', $refs);
+        // 2. Wire into the bootstrap listener (for Algebra::from() static)
+        if ($container->hasDefinition('algebra.bootstrap_listener')) {
+            $entries = [];
+            $listener = $container->getDefinition('algebra.bootstrap_listener');
+
+            foreach ($tagged as $id => $tags) {
+                $priority = (int) ($tags[0]['priority'] ?? 0);
+                $entries[] = ['adapter' => new Reference($id), 'priority' => $priority];
+            }
+
+            $listener->setArgument('$adapters', $entries);
+        }
     }
 }

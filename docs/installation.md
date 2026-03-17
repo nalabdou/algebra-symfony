@@ -40,6 +40,7 @@ Expected output:
 algebra.factory     Nalabdou\Algebra\Collection\CollectionFactory
 algebra.evaluator   Nalabdou\Algebra\Expression\ExpressionEvaluator
 algebra.aggregates  Nalabdou\Algebra\Aggregate\AggregateRegistry
+algebra.adapter_registry  Nalabdou\Algebra\Adapter\AdapterRegistry
 ```
 
 ## Next steps

@@ -4,24 +4,24 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c7fa67f0e77d48ff71baf4b77ac02fce",
+    "content-hash": "399f9ccbf40540e6a85129d0e30d39e5",
     "packages": [
         {
             "name": "nalabdou/algebra-php",
-            "version": "v1.0.0",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nalabdou/algebra-php.git",
-                "reference": "bbc05242efb6623a9838fc4c5bcaa4efae962dc0"
+                "reference": "19ded6dcaf234371f34aca39c2d533ff2ce0d29e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nalabdou/algebra-php/zipball/bbc05242efb6623a9838fc4c5bcaa4efae962dc0",
-                "reference": "bbc05242efb6623a9838fc4c5bcaa4efae962dc0",
+                "url": "https://api.github.com/repos/nalabdou/algebra-php/zipball/19ded6dcaf234371f34aca39c2d533ff2ce0d29e",
+                "reference": "19ded6dcaf234371f34aca39c2d533ff2ce0d29e",
                 "shasum": ""
             },
             "require": {
-                "php": "^8.2"
+                "php": ">=8.2"
             },
             "require-dev": {
                 "friendsofphp/php-cs-fixer": "^3.60",
@@ -64,9 +64,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nalabdou/algebra-php/issues",
-                "source": "https://github.com/nalabdou/algebra-php/tree/v1.0.0"
+                "source": "https://github.com/nalabdou/algebra-php/tree/v1.1.0"
             },
-            "time": "2026-03-15T18:15:27+00:00"
+            "time": "2026-03-16T23:31:18+00:00"
         },
         {
             "name": "psr/cache",
@@ -1121,6 +1121,7 @@
                 "symfony/twig-bridge": "<6.4",
                 "symfony/twig-bundle": "<6.4",
                 "symfony/validator": "<6.4",
+                "symfony/web-profiler-bundle": "<6.4",
                 "symfony/webhook": "<7.2",
                 "symfony/workflow": "<7.4"
             },
@@ -3494,11 +3495,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.1.40",
+            "version": "2.1.41",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/9b2c7aeb83a75d8680ea5e7c9b7fca88052b766b",
-                "reference": "9b2c7aeb83a75d8680ea5e7c9b7fca88052b766b",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/a2eae8f20856b3afe74bf1f9726ce8c11438e300",
+                "reference": "a2eae8f20856b3afe74bf1f9726ce8c11438e300",
                 "shasum": ""
             },
             "require": {
@@ -3543,7 +3544,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-02-23T15:04:35+00:00"
+            "time": "2026-03-16T18:24:10+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -6425,7 +6426,7 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.2"
+        "php": ">=8.2"
     },
     "platform-dev": {},
     "platform-overrides": {

@@ -11,16 +11,14 @@ No configuration required.
 composer require doctrine/orm
 ```
 
-Pass a `QueryBuilder` directly to `algebra.factory`:
+Pass a `QueryBuilder` directly to `Algebra::from`:
 
 ```php
-use Nalabdou\Algebra\Collection\CollectionFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class ReportService
 {
     public function __construct(
-        private readonly CollectionFactory      $algebraFactory,
         private readonly EntityManagerInterface $em,
     ) {}
 
@@ -32,7 +30,7 @@ final class ReportService
             ->where('o.createdAt > :since')
             ->setParameter('since', new \DateTime('-90 days'));
 
-        return $this->algebraFactory->create($qb)
+        return Algebra::from($qb)
             ->where("item['status'] == 'paid'")
             ->groupBy('region')
             ->aggregate([
@@ -58,11 +56,11 @@ associative array which is the native algebra-php format. Apply Doctrine
 composer require doctrine/collections
 ```
 
-Pass any `Doctrine\Common\Collections\Collection` to `algebra.factory`:
+Pass any `Doctrine\Common\Collections\Collection` to `Algebra::from`:
 
 ```php
 // OneToMany relation on a User entity
-$result = $this->algebraFactory->create($user->getOrders())
+$result = Algebra::from($user->getOrders())
     ->where("item['status'] == 'paid'")
     ->orderBy('amount', 'desc')
     ->topN(10, by: 'amount')
@@ -86,18 +84,3 @@ When multiple adapters are registered, they are checked in priority order:
 | 90 | `DoctrineCollectionAdapter` |
 | 0 | Custom adapters (default) |
 | — | Built-in: array, generator, Traversable (always last) |
-
-## Using with `Algebra::from()`
-
-> Doctrine adapters are only available via the injectable `algebra.factory` service.
-> `Algebra::from()` uses its own internal factory and does not include tagged adapters.
-
-Use `algebra.factory` for all Doctrine inputs:
-
-```php
-// Correct
-$this->algebraFactory->create($queryBuilder)
-
-// Will throw InvalidArgumentException — no Doctrine adapter registered
-Algebra::from($queryBuilder)
-```

@@ -1,19 +1,22 @@
 # DI Services
 
-The bundle registers three public services you can inject anywhere in your Symfony application.
+The bundle registers several public services that you can inject anywhere in your Symfony application.
 
 ## Available services
 
-| Service ID | Class | Description |
-|---|---|---|
-| `algebra.factory` | `CollectionFactory` | Creates `RelationalCollection` from any supported input |
-| `algebra.evaluator` | `ExpressionEvaluator` | Evaluates string expressions and closures |
-| `algebra.aggregates` | `AggregateRegistry` | Registry of all aggregate functions |
+| Service ID                 | Class                 | Description                                                       |
+| -------------------------- | --------------------- | ----------------------------------------------------------------- |
+| `algebra.factory`          | `CollectionFactory`   | Creates `RelationalCollection` instances from any supported input |
+| `algebra.evaluator`        | `ExpressionEvaluator` | Evaluates string expressions and closures                         |
+| `algebra.aggregates`       | `AggregateRegistry`   | Registry containing all aggregate functions                       |
+| `algebra.adapter_registry` | `AdapterRegistry`     | Registry containing all data adapters                             |
 
-## Injecting `CollectionFactory`
+---
 
-The primary service for most use cases. It includes all tagged adapters
-(Doctrine, custom adapters registered via `#[AsAlgebraAdapter]`).
+# Injecting `CollectionFactory`
+
+The primary service for most use cases. It automatically includes all tagged adapters
+(Doctrine, custom adapters registered via `#[AsAlgebraAdapter]`, etc.).
 
 ```php
 use Nalabdou\Algebra\Collection\CollectionFactory;
@@ -34,7 +37,10 @@ final class OrderController
         $result = $this->algebraFactory->create($orders)
             ->where("item['status'] == 'paid'")
             ->groupBy('region')
-            ->aggregate(['revenue' => 'sum(amount)', 'count' => 'count(*)'])
+            ->aggregate([
+                'revenue' => 'sum(amount)',
+                'count' => 'count(*)',
+            ])
             ->orderBy('revenue', 'desc')
             ->toArray();
 
@@ -43,31 +49,34 @@ final class OrderController
 }
 ```
 
-## Using `Algebra::from()` statically
+---
 
-`Algebra::from()` continues to work as documented. The bundle's
-`AlgebraBootstrapListener` calls `Algebra::reset()` on the first request and
-re-registers all tagged aggregates, so your custom aggregate functions are
-available when calling `Algebra::from()`.
+# Using `Algebra::from()` statically
+
+`Algebra::from()` continues to work as documented.
+
+The bundle registers an `AlgebraBootstrapListener` that calls `Algebra::reset()` on
+the first request and re-registers all tagged aggregates and adapters.
+
+This means that **custom aggregate functions and adapters registered via Symfony
+tags or attributes are automatically available when using `Algebra::from()`**.
 
 ```php
 use Nalabdou\Algebra\Algebra;
 
-// Works — custom aggregates registered via #[AsAggregate] are available
+// Custom aggregates registered via #[AsAggregate] are available
 $result = Algebra::from($orders)
-    ->aggregate(['geo' => 'geomean(price)'])
+    ->aggregate([
+        'geo' => 'geomean(price)',
+    ])
     ->toArray();
 ```
 
-> **Custom adapters and `Algebra::from()`:**
-> Custom adapters registered via `#[AsAlgebraAdapter]` are only available
-> through the injectable `algebra.factory` service.
-> `Algebra::from()` uses its own internal factory which only supports
-> the built-in array, generator, and Traversable adapters.
+---
 
-## Injecting `ExpressionEvaluator`
+# Injecting `ExpressionEvaluator`
 
-Useful if you need to evaluate expressions outside of a pipeline:
+Useful when you want to evaluate expressions **outside of a relational pipeline**.
 
 ```php
 use Nalabdou\Algebra\Expression\ExpressionEvaluator;
@@ -90,9 +99,11 @@ final class FilterService
 }
 ```
 
-## Injecting `AggregateRegistry`
+---
 
-Useful for programmatic aggregate registration or inspection:
+# Injecting `AggregateRegistry`
+
+Useful for **programmatic aggregate registration or inspection**.
 
 ```php
 use Nalabdou\Algebra\Aggregate\AggregateRegistry;
@@ -115,13 +126,45 @@ final class AggregateInspector
 }
 ```
 
-## Autowiring
+---
 
-All three services support autowiring by type:
+# Injecting `AdapterRegistry`
+
+The `AdapterRegistry` stores all registered adapters and allows you to inspect
+or manually register adapters at runtime.
 
 ```php
-// Any of these type hints works in any Symfony service constructor
+use Nalabdou\Algebra\Adapter\AdapterRegistry;
+
+final class AdapterInspector
+{
+    public function __construct(
+        private readonly AdapterRegistry $adapters,
+    ) {}
+
+    public function available(): array
+    {
+        return array_keys($this->adapters->all());
+    }
+
+    public function hasDoctrineAdapter(): bool
+    {
+        return $this->adapters->has('doctrine');
+    }
+}
+```
+
+---
+
+# Autowiring
+
+All services support autowiring by type:
+
+```php
 private readonly CollectionFactory $algebraFactory
 private readonly ExpressionEvaluator $evaluator
 private readonly AggregateRegistry $aggregates
+private readonly AdapterRegistry $adapters
 ```
+
+Symfony will automatically inject the correct service based on the type hint.

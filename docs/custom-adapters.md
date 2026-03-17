@@ -40,12 +40,12 @@ final class CsvFileAdapter implements AdapterInterface
 }
 ```
 
-The adapter is auto-injected into the injectable `algebra.factory` service
+The adapter is auto-injected into the injectable `algebra.adapter_registry` service
 via the `AdapterPass` compiler pass.
 
 ```php
 // Works — CsvFileAdapter is in the factory's adapter chain
-$result = $this->algebraFactory->create('/data/orders.csv')
+$result = Algebra::from('/data/orders.csv')
     ->where("item['status'] == 'paid'")
     ->groupBy('region')
     ->aggregate(['revenue' => 'sum(amount)'])
@@ -97,7 +97,7 @@ final class PdoStatementAdapter implements AdapterInterface
 $stmt = $pdo->prepare('SELECT id, amount, status FROM orders WHERE created_at > ?');
 $stmt->execute([$since]);
 
-$result = $this->algebraFactory->create($stmt)
+$result = Algebra::from($stmt)
     ->groupBy('status')
     ->aggregate(['total' => 'sum(amount)'])
     ->toArray();
@@ -128,23 +128,7 @@ final class RedisSortedSetAdapter implements AdapterInterface
 }
 
 // Usage
-$top10 = $this->algebraFactory->create(['__redis_zset' => 'leaderboard'])
+$top10 = Algebra::from(['__redis_zset' => 'leaderboard'])
     ->topN(10, by: 'score')
     ->toArray();
 ```
-
-## Important: `Algebra::from()` limitation
-
-> Custom adapters are only available via the **injectable** `algebra.factory` service.
-> `Algebra::from()` uses its own private internal factory — the bundle cannot
-> inject tagged adapters into it without modifying algebra-php source code.
-
-```php
-// Correct — uses the DI-configured factory with all tagged adapters
-$this->algebraFactory->create('/data/orders.csv')
-
-// Throws InvalidArgumentException — Algebra::from() has no CSV adapter
-Algebra::from('/data/orders.csv')
-```
-
-For `Algebra::from()` with array/generator/Traversable inputs, it always works as documented.

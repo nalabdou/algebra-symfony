@@ -2,7 +2,7 @@
     "name": "nalabdou/algebra-symfony",
     "description": "Symfony 7 bundle for algebra-php DI integration, Doctrine adapter.",
     "type": "symfony-bundle",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "license": "MIT",
     "keywords": [
         "algebra",
@@ -21,7 +21,7 @@
         }
     ],
     "require": {
-        "php": "^8.2",
+        "php": ">=8.2",
         "nalabdou/algebra-php": "^1.0",
         "symfony/framework-bundle": "^7.0",
         "symfony/dependency-injection": "^7.0",
