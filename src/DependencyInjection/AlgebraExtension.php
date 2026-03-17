@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nalabdou\Algebra\Symfony\DependencyInjection;
 
+use Nalabdou\Algebra\Adapter\AdapterRegistry;
 use Nalabdou\Algebra\Aggregate\AggregateRegistry;
 use Nalabdou\Algebra\Collection\CollectionFactory;
 use Nalabdou\Algebra\Expression\ExpressionCache;
@@ -31,7 +32,7 @@ use Symfony\Component\HttpKernel\DependencyInjection\Extension;
  * - `algebra.evaluator`  — ExpressionEvaluator (public, injectable)
  * - `algebra.aggregates` — AggregateRegistry (public, injectable)
  *
- * Twig support lives in the separate nalabdou/algebra-twig [*Comming soon*] package.
+ * Twig support lives in the separate nalabdou/algebra-twig package.
  */
 final class AlgebraExtension extends Extension
 {
@@ -68,14 +69,17 @@ final class AlgebraExtension extends Extension
             ->setPublic(false);
 
         // CollectionFactory is available for injection as algebra.factory.
-        // It is built with built-in adapters; tagged adapters are injected
-        // via AdapterPass into $adapters argument.
+        // Built-in adapters are pre-registered in the AdapterRegistry.
+        // Tagged adapters are injected into algebra.adapter_registry via AdapterPass.
+        $container->register('algebra.adapter_registry', AdapterRegistry::class)
+            ->setPublic(true);
+
         $container->register('algebra.factory', CollectionFactory::class)
             ->setArgument('$planner', new Reference('algebra.planner'))
             ->setArgument('$evaluator', new Reference('algebra.evaluator'))
             ->setArgument('$accessor', new Reference('algebra.accessor'))
             ->setArgument('$aggregates', new Reference('algebra.aggregates'))
-            ->setArgument('$adapters', [])
+            ->setArgument('$adapterRegistry', new Reference('algebra.adapter_registry'))
             ->setPublic(true);
     }
 
@@ -86,6 +90,7 @@ final class AlgebraExtension extends Extension
         // Tagged adapters and aggregates are injected as arrays by compiler passes.
         $container->register('algebra.bootstrap_listener', AlgebraBootstrapListener::class)
             ->setArgument('$aggregates', [])   // filled by AggregatePass
+            ->setArgument('$adapters', [])   // filled by AdapterPass
             ->addTag('kernel.event_listener', [
                 'event' => 'kernel.request',
                 'method' => 'onKernelRequest',

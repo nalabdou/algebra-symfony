@@ -94,6 +94,6 @@ Report bugs and request features at:
 https://github.com/nalabdou/algebra-symfony/issues
 
 Please include:
-- PHP version and `composer show | grep algebra-symfony`
+- PHP version and `composer show | grep algebra`
 - Minimal reproducible example
 - Expected vs actual output

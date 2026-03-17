@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nalabdou\Algebra\Symfony\Tests\Unit\EventListener;
 
 use Nalabdou\Algebra\Algebra;
+use Nalabdou\Algebra\Contract\AdapterInterface;
 use Nalabdou\Algebra\Contract\AggregateInterface;
 use Nalabdou\Algebra\Symfony\EventListener\AlgebraBootstrapListener;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -50,22 +51,37 @@ final class AlgebraBootstrapListenerTest extends TestCase
         };
     }
 
+    private function makeAdapter(string $key): AdapterInterface
+    {
+        return new class($key) implements AdapterInterface {
+            public function __construct(private readonly string $k)
+            {
+            }
+
+            public function supports(mixed $input): bool
+            {
+                return $input === $this->k;
+            }
+
+            public function toArray(mixed $input): array
+            {
+                return [['key' => $this->k]];
+            }
+        };
+    }
+
     public function testResetsAlgebraOnMainRequest(): void
     {
         $before = Algebra::aggregates();
         (new AlgebraBootstrapListener())->onKernelRequest($this->makeEvent());
-        $after = Algebra::aggregates();
-
-        self::assertNotSame($before, $after);
+        self::assertNotSame($before, Algebra::aggregates());
     }
 
     public function testIgnoresSubRequests(): void
     {
         $before = Algebra::aggregates();
         (new AlgebraBootstrapListener())->onKernelRequest($this->makeEvent(HttpKernelInterface::SUB_REQUEST));
-        $after = Algebra::aggregates();
-
-        self::assertSame($before, $after);
+        self::assertSame($before, Algebra::aggregates());
     }
 
     public function testRegistersAggregatesAfterReset(): void
@@ -83,14 +99,66 @@ final class AlgebraBootstrapListenerTest extends TestCase
         $listener = new AlgebraBootstrapListener(aggregates: [
             $this->makeAggregate('agg_a'),
             $this->makeAggregate('agg_b'),
-            $this->makeAggregate('agg_c'),
         ]);
 
         $listener->onKernelRequest($this->makeEvent());
 
         self::assertTrue(Algebra::aggregates()->has('agg_a'));
         self::assertTrue(Algebra::aggregates()->has('agg_b'));
-        self::assertTrue(Algebra::aggregates()->has('agg_c'));
+    }
+
+    public function testRegistersAdaptersAfterReset(): void
+    {
+        $adapter = $this->makeAdapter('__csv__');
+        $listener = new AlgebraBootstrapListener(
+            adapters: [['adapter' => $adapter, 'priority' => 50]]
+        );
+
+        $listener->onKernelRequest($this->makeEvent());
+
+        $found = Algebra::adapters()->find('__csv__');
+        self::assertSame($adapter, $found);
+    }
+
+    public function testRegistersMultipleAdaptersWithPriorities(): void
+    {
+        $a1 = $this->makeAdapter('__src1__');
+        $a2 = $this->makeAdapter('__src2__');
+
+        $listener = new AlgebraBootstrapListener(adapters: [
+            ['adapter' => $a1, 'priority' => 100],
+            ['adapter' => $a2, 'priority' => 50],
+        ]);
+
+        $listener->onKernelRequest($this->makeEvent());
+
+        self::assertSame($a1, Algebra::adapters()->find('__src1__'));
+        self::assertSame($a2, Algebra::adapters()->find('__src2__'));
+    }
+
+    public function testAdapterRegisteredViaListenerWorksInAlgebraFrom(): void
+    {
+        $adapter = $this->makeAdapter('__my_source__');
+        $listener = new AlgebraBootstrapListener(
+            adapters: [['adapter' => $adapter, 'priority' => 50]]
+        );
+
+        $listener->onKernelRequest($this->makeEvent());
+
+        $result = Algebra::from('__my_source__')->toArray();
+        self::assertSame('__my_source__', $result[0]['key']);
+    }
+
+    public function testAggregateAvailableInPipelineAfterBoot(): void
+    {
+        $listener = new AlgebraBootstrapListener(aggregates: [$this->makeAggregate('test_sum')]);
+        $listener->onKernelRequest($this->makeEvent());
+
+        $result = Algebra::from([['v' => 10], ['v' => 20]])
+            ->aggregate(['total' => 'test_sum(v)'])
+            ->toArray();
+
+        self::assertSame(30, $result[0]['total']);
     }
 
     public function testOnlyBootsOnce(): void
@@ -102,22 +170,6 @@ final class AlgebraBootstrapListenerTest extends TestCase
         $registryAfterFirst = Algebra::aggregates();
 
         $listener->onKernelRequest($event);
-        $registryAfterSecond = Algebra::aggregates();
-
-        self::assertSame($registryAfterFirst, $registryAfterSecond);
-    }
-
-    public function testAggregateAvailableInPipelineAfterBoot(): void
-    {
-        $listener = new AlgebraBootstrapListener(aggregates: [
-            $this->makeAggregate('test_sum'),
-        ]);
-        $listener->onKernelRequest($this->makeEvent());
-
-        $result = Algebra::from([['v' => 10], ['v' => 20]])
-            ->aggregate(['total' => 'test_sum(v)'])
-            ->toArray();
-
-        self::assertSame(30, $result[0]['total']);
+        self::assertSame($registryAfterFirst, Algebra::aggregates());
     }
 }

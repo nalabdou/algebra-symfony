@@ -1,6 +1,6 @@
 # algebra-symfony
 
-Symfony 7 bundle for [algebra-php](https://github.com/nalabdou/algebra-php) — the pure PHP 8.2 relational algebra engine.
+Symfony 7 bundle for [algebra-php](https://github.com/nalabdou/algebra-php) — the pure PHP 8.4 relational algebra engine.
 
 The bundle works entirely with the **public algebra-php API**. No modifications
 to algebra-php are required or performed.
@@ -17,7 +17,7 @@ to algebra-php are required or performed.
 
 ## What is NOT in this bundle
 
-- **Twig filters** — provided by `nalabdou/algebra-twig` [*Comming soon*] (separate package)
+- **Twig filters** — provided by `nalabdou/algebra-twig` (separate package)
 - **Modifications to algebra-php** — the bundle only uses its public API
 
 ## Contents

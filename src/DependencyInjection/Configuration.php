@@ -11,7 +11,6 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
  * Bundle configuration schema.
  *
  * Full reference:
- *
  * ```yaml
  * # config/packages/algebra.yaml
  * algebra:
@@ -30,8 +29,8 @@ final class Configuration implements ConfigurationInterface
                 ->booleanNode('strict_mode')
                     ->defaultTrue()
                     ->info(
-                        'When true, invalid expressions throw RuntimeException. '.
-                        'Set false for lenient mode — useful when expressions come from user input.'
+                        'When true, invalid expressions throw RuntimeException. '
+                        .'Set false for lenient mode — useful when expressions come from user input.'
                     )
                 ->end()
             ->end();

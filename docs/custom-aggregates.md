@@ -44,11 +44,6 @@ Algebra::from($products)
     ->aggregate(['geoMeanPrice' => 'geomean(price)'])
     ->toArray();
 
-// Via injectable CollectionFactory — always available
-$this->algebraFactory->create($products)
-    ->groupBy('category')
-    ->aggregate(['geoMeanPrice' => 'geomean(price)'])
-    ->toArray();
 ```
 
 ## Using `services.yaml` (alternative)

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Nalabdou\Algebra\Symfony\Tests\Integration;
 
+use Nalabdou\Algebra\Adapter\AdapterRegistry;
 use Nalabdou\Algebra\Algebra;
+use Nalabdou\Algebra\Contract\AdapterInterface;
 use Nalabdou\Algebra\Contract\AggregateInterface;
 use Nalabdou\Algebra\Symfony\AlgebraBundle;
 use Nalabdou\Algebra\Symfony\DependencyInjection\AlgebraExtension;
@@ -15,6 +17,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 #[CoversClass(AlgebraBundle::class)]
 #[CoversClass(AlgebraExtension::class)]
@@ -35,37 +40,39 @@ final class BundleIntegrationTest extends TestCase
         (new AlgebraExtension())->load([[]], $this->container);
     }
 
+    private function makeMainRequestEvent(): RequestEvent
+    {
+        return new RequestEvent(
+            $this->createMock(\Symfony\Component\HttpKernel\KernelInterface::class),
+            Request::create('/'),
+            HttpKernelInterface::MAIN_REQUEST
+        );
+    }
+
     public function testAllCoreServicesRegistered(): void
     {
-        $required = [
-            'algebra.factory',
-            'algebra.evaluator',
-            'algebra.aggregates',
-            'algebra.planner',
-            'algebra.accessor',
-            'algebra.cache',
-            'algebra.bootstrap_listener',
-        ];
-
-        foreach ($required as $id) {
+        foreach (
+            [
+                'algebra.factory',
+                'algebra.evaluator',
+                'algebra.aggregates',
+                'algebra.adapter_registry',
+                'algebra.planner',
+                'algebra.accessor',
+                'algebra.cache',
+                'algebra.bootstrap_listener',
+            ] as $id
+        ) {
             self::assertTrue($this->container->hasDefinition($id), "Missing: {$id}");
         }
     }
 
-    public function testAggregatePassWiresTaggedServiceIntoRegistry(): void
+    public function testAdapterRegistryServiceIsPublic(): void
     {
-        $def = new Definition(AnonymousAggregate::class);
-        $def->addTag('algebra.aggregate');
-        $this->container->setDefinition('app.test_aggregate', $def);
-
-        (new AggregatePass())->process($this->container);
-
-        $calls = $this->container->getDefinition('algebra.aggregates')->getMethodCalls();
-        self::assertNotEmpty($calls);
-        self::assertSame('register', $calls[0][0]);
+        self::assertTrue($this->container->getDefinition('algebra.adapter_registry')->isPublic());
     }
 
-    public function testAggregatePassAlsoWiresIntoBootstrapListener(): void
+    public function testAggregatePassWiresIntoRegistryAndListener(): void
     {
         $def = new Definition(AnonymousAggregate::class);
         $def->addTag('algebra.aggregate');
@@ -73,11 +80,14 @@ final class BundleIntegrationTest extends TestCase
 
         (new AggregatePass())->process($this->container);
 
+        $registryCalls = $this->container->getDefinition('algebra.aggregates')->getMethodCalls();
         $listenerArgs = $this->container->getDefinition('algebra.bootstrap_listener')->getArguments();
+
+        self::assertNotEmpty($registryCalls);
         self::assertNotEmpty($listenerArgs['$aggregates']);
     }
 
-    public function testAdapterPassWiresTaggedAdapterIntoFactory(): void
+    public function testAdapterPassWiresIntoRegistryAndListener(): void
     {
         $def = new Definition(AnonymousAdapter::class);
         $def->addTag('algebra.adapter', ['priority' => 50]);
@@ -85,13 +95,15 @@ final class BundleIntegrationTest extends TestCase
 
         (new AdapterPass())->process($this->container);
 
-        $factoryArgs = $this->container->getDefinition('algebra.factory')->getArguments();
-        self::assertNotEmpty($factoryArgs['$adapters']);
+        $registryCalls = $this->container->getDefinition('algebra.adapter_registry')->getMethodCalls();
+        $listenerArgs = $this->container->getDefinition('algebra.bootstrap_listener')->getArguments();
+
+        self::assertNotEmpty($registryCalls, 'AdapterPass must wire into adapter_registry');
+        self::assertNotEmpty($listenerArgs['$adapters'], 'AdapterPass must wire into bootstrap_listener');
     }
 
-    public function testPipelineWorksWithoutBundleAfterReset(): void
+    public function testPipelineWorksStandalone(): void
     {
-        // Sanity check: algebra-php works standalone without the bundle
         $result = Algebra::from([['id' => 1, 'status' => 'paid'], ['id' => 2, 'status' => 'pending']])
             ->where("item['status'] == 'paid'")
             ->toArray();
@@ -99,7 +111,7 @@ final class BundleIntegrationTest extends TestCase
         self::assertCount(1, $result);
     }
 
-    public function testCustomAggregateViaListenerAvailableInPipeline(): void
+    public function testCustomAggregateAvailableViaListener(): void
     {
         $agg = new class implements AggregateInterface {
             public function name(): string
@@ -123,13 +135,33 @@ final class BundleIntegrationTest extends TestCase
         self::assertSame(90, $result[0]['ts']);
     }
 
-    private function makeMainRequestEvent(): \Symfony\Component\HttpKernel\Event\RequestEvent
+    public function testCustomAdapterAvailableViaAlgebraFromAfterListener(): void
     {
-        return new \Symfony\Component\HttpKernel\Event\RequestEvent(
-            $this->createMock(\Symfony\Component\HttpKernel\KernelInterface::class),
-            \Symfony\Component\HttpFoundation\Request::create('/'),
-            \Symfony\Component\HttpKernel\HttpKernelInterface::MAIN_REQUEST
+        $adapter = new class implements AdapterInterface {
+            public function supports(mixed $input): bool
+            {
+                return '__bundle_test__' === $input;
+            }
+
+            public function toArray(mixed $input): array
+            {
+                return [['source' => 'bundle']];
+            }
+        };
+
+        $listener = new AlgebraBootstrapListener(
+            adapters: [['adapter' => $adapter, 'priority' => 50]]
         );
+        $listener->onKernelRequest($this->makeMainRequestEvent());
+
+        $result = Algebra::from('__bundle_test__')->toArray();
+        self::assertSame('bundle', $result[0]['source']);
+    }
+
+    public function testAdapterRegistryHas3BuiltinsByDefault(): void
+    {
+        $registry = new AdapterRegistry();
+        self::assertSame(3, $registry->count());
     }
 }
 
@@ -138,7 +170,7 @@ final class AnonymousAggregate implements AggregateInterface
 {
     public function name(): string
     {
-        return 'anon';
+        return 'anon_agg';
     }
 
     public function compute(array $values): mixed
@@ -148,7 +180,7 @@ final class AnonymousAggregate implements AggregateInterface
 }
 
 /** @internal test fixture */
-final class AnonymousAdapter implements \Nalabdou\Algebra\Contract\AdapterInterface
+final class AnonymousAdapter implements AdapterInterface
 {
     public function supports(mixed $input): bool
     {

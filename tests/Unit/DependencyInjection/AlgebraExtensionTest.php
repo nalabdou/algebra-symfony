@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nalabdou\Algebra\Symfony\Tests\Unit\DependencyInjection;
 
+use Nalabdou\Algebra\Adapter\AdapterRegistry;
 use Nalabdou\Algebra\Aggregate\AggregateRegistry;
 use Nalabdou\Algebra\Collection\CollectionFactory;
 use Nalabdou\Algebra\Expression\ExpressionEvaluator;
@@ -44,6 +45,26 @@ final class AlgebraExtensionTest extends TestCase
         self::assertTrue($this->container->getDefinition('algebra.aggregates')->isPublic());
     }
 
+    public function testRegistersAdapterRegistryAsPublic(): void
+    {
+        self::assertTrue($this->container->hasDefinition('algebra.adapter_registry'));
+        self::assertTrue($this->container->getDefinition('algebra.adapter_registry')->isPublic());
+    }
+
+    public function testAdapterRegistryUsesCorrectClass(): void
+    {
+        self::assertSame(
+            AdapterRegistry::class,
+            $this->container->getDefinition('algebra.adapter_registry')->getClass()
+        );
+    }
+
+    public function testFactoryReceivesAdapterRegistry(): void
+    {
+        $args = $this->container->getDefinition('algebra.factory')->getArguments();
+        self::assertArrayHasKey('$adapterRegistry', $args);
+    }
+
     public function testRegistersPlannerAsPrivate(): void
     {
         self::assertTrue($this->container->hasDefinition('algebra.planner'));
@@ -53,23 +74,30 @@ final class AlgebraExtensionTest extends TestCase
     public function testRegistersBootstrapListener(): void
     {
         self::assertTrue($this->container->hasDefinition('algebra.bootstrap_listener'));
-    }
-
-    public function testBootstrapListenerClass(): void
-    {
         self::assertSame(
             AlgebraBootstrapListener::class,
             $this->container->getDefinition('algebra.bootstrap_listener')->getClass()
         );
     }
 
-    public function testBootstrapListenerHasCorrectEventTag(): void
+    public function testBootstrapListenerEventTag(): void
     {
         $tags = $this->container->getDefinition('algebra.bootstrap_listener')->getTags();
-        self::assertArrayHasKey('kernel.event_listener', $tags);
         self::assertSame('kernel.request', $tags['kernel.event_listener'][0]['event']);
         self::assertSame('onKernelRequest', $tags['kernel.event_listener'][0]['method']);
         self::assertSame(256, $tags['kernel.event_listener'][0]['priority']);
+    }
+
+    public function testBootstrapListenerHasAdaptersArgument(): void
+    {
+        $args = $this->container->getDefinition('algebra.bootstrap_listener')->getArguments();
+        self::assertArrayHasKey('$adapters', $args);
+    }
+
+    public function testBootstrapListenerHasAggregatesArgument(): void
+    {
+        $args = $this->container->getDefinition('algebra.bootstrap_listener')->getArguments();
+        self::assertArrayHasKey('$aggregates', $args);
     }
 
     public function testStrictModeDefaultsToTrue(): void
